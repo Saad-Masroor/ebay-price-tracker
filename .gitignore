@@ -1,0 +1,27 @@
+# Python bytecode files
+*.pyc
+*.pyo
+__pycache__/
+
+# Virtual environment folder
+venv/
+
+# Selenium's WebDriver binary
+chromedriver.exe
+
+# IDE/editor files
+.vscode/
+.idea/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Data files (you might not want to track scraped data in Git)
+data/
+*.csv
+
+# Logs
+*.log
+
+# Environment variables
+.env
