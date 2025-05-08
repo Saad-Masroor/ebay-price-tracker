@@ -10,7 +10,7 @@ def clean_price(price_range):
         try:
             if 'to' in price_range:
                 lower, upper = price_range.split(' to ')
-                return (float(lower.replace('$', '').replace(',','').strip())+
+                return (float(lower.replace('$', '').replace(',','').strip()) +
                         float(upper.replace('$', '').replace(',','').strip())) / 2
             
             else:
@@ -27,10 +27,19 @@ def clean_data(df):
     df = df.dropna(subset=['title'])
 
     # Filling missing Price with 0
-    df['price'].fillna(0, inplace = True)
+    df.loc[:, 'price'] = df['price'].fillna(0)
 
     # Cleaning Price
-    df['price'] = df['price'].apply(clean_price)
+    df.loc[:, 'price'] = df['price'].apply(clean_price)
+
+    # Cleaning condition (fill missing with 'Unknown')
+    df.loc[:, 'condition'] = df['condition'].fillna('Unknown')
+
+    # Cleaning shipping info (fill missing with 'Not Available')
+    df.loc[:, 'shipping'] = df['shipping'].fillna('Not Available')
+
+    # Cleaning seller info (fill missing with 'Unknown Seller')
+    df.loc[:, 'seller_info'] = df['seller_info'].fillna('Unknown Seller')
 
     # Drop Duplicates based on links
     df = df.drop_duplicates(subset=['link'])

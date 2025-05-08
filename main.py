@@ -5,7 +5,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from data_cleaning import load_data, clean_data, save_data
-
+from database.insert_db import insert_data
 def setup_driver():
     options = Options()
     options.add_argument("--headless")
@@ -18,7 +18,7 @@ def scrape_ebay(product_name):
     search_url = f"https://www.ebay.com/sch/i.html?_nkw={product_name.replace(' ', '+')}"
     driver = setup_driver()
     driver.get(search_url)
-    time.sleep(5)  # Increased time for page to load completely
+    time.sleep(5)  # Wait for page to load
 
     items = driver.find_elements(By.CSS_SELECTOR, ".s-item")
     scraped_data = []
@@ -28,10 +28,37 @@ def scrape_ebay(product_name):
             title = item.find_element(By.CSS_SELECTOR, ".s-item__title").text
             price = item.find_element(By.CSS_SELECTOR, ".s-item__price").text
             link = item.find_element(By.CSS_SELECTOR, ".s-item__link").get_attribute("href")
-            scraped_data.append({"title": title, "price": price, "link": link})
+
+            # Try extracting condition
+            try:
+                condition = item.find_element(By.CSS_SELECTOR, ".s-item__details.clearfix .SECONDARY_INFO").text
+            except:
+                condition = "N/A"
+
+            # Try extracting shipping info
+            try:
+                shipping = item.find_element(By.CSS_SELECTOR, ".s-item__shipping, .s-item__freeXDays").text
+            except:
+                shipping = "N/A"
+
+            # Try extracting seller info
+            try:
+                seller_info = item.find_element(By.CSS_SELECTOR, ".s-item__details.clearfix .s-item__seller-info-text").text
+            except:
+                seller_info = "N/A"
+
+            scraped_data.append({
+                "title": title,
+                "price": price,
+                "link": link,
+                "condition": condition,
+                "shipping": shipping,
+                "seller_info": seller_info
+            })
+
         except Exception as e:
-            print(f"[!] Error scraping item: {e}")  # You can log the error if needed
-            continue  # Skip items that don't have required info
+            print(f"[!] Error scraping item: {e}")
+            continue
 
     driver.quit()
     return scraped_data
@@ -42,7 +69,7 @@ def save_to_csv(data, filename="data/products.csv"):
         return
 
     with open(filename, mode="w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["title", "price", "link"])
+        writer = csv.DictWriter(f, fieldnames=["title", "price", "link", "condition", "shipping", "seller_info"])
         writer.writeheader()
         writer.writerows(data)
 
@@ -53,15 +80,18 @@ def main():
     products = scrape_ebay(product)
     save_to_csv(products)
 
-    # Load the data from the CSV file (Ensure this matches the filename you're saving)
+    # Load data
     df = load_data('data/products.csv')
-    
-    # Clean the data
+
+    # Clean data
     df = clean_data(df)
-    
-    # Save the cleaned data to a new file
+
+    # Save cleaned data
     save_data(df, 'data/cleaned_ebay_data.csv')
     print("Data cleaned and saved successfully!")
+
+    insert_data("data/cleaned_ebay_data.csv")
+    print("Data inserted into PostgreSQL!")
 
 if __name__ == "__main__":
     main()
